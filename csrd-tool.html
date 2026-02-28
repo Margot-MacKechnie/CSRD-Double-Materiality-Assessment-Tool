@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSRD Double Materiality Assessment Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --blue:#003399;--blue-l:#0050cc;--blue-pale:#e8eeff;
+  --green:#1a7a4a;--green-l:#e6f5ed;
+  --amber:#b45309;--amber-l:#fef3c7;
+  --red:#b91c1c;--red-l:#fee2e2;
+  --g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g400:#9ca3af;--g600:#4b5563;--g800:#1f2937;
+  --r:10px;--sh:0 2px 12px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--g50);color:var(--g800)}
+header{background:var(--blue);color:#fff;padding:18px 40px;display:flex;align-items:center;gap:14px}
+.stars{font-size:18px;letter-spacing:2px}
+header h1{font-size:19px;font-weight:700}
+header p{font-size:12px;opacity:.75;margin-top:2px}
+.hdr-actions{margin-left:auto;display:flex;gap:8px}
+
+.progress-bar{background:#fff;border-bottom:1px solid var(--g200);padding:0 40px;display:flex}
+.step{padding:13px 22px;font-size:13px;font-weight:500;color:var(--g400);border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:7px}
+.step.active{color:var(--blue);border-bottom-color:var(--blue)}
+.step.done{color:var(--green);border-bottom-color:var(--green)}
+.sn{width:21px;height:21px;border-radius:50%;background:var(--g200);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.step.active .sn{background:var(--blue);color:#fff}
+.step.done .sn{background:var(--green);color:#fff}
+
+main{max-width:980px;margin:28px auto;padding:0 22px 60px}
+.card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:28px;margin-bottom:18px}
+.card h2{font-size:17px;font-weight:700;margin-bottom:5px}
+.subtitle{font-size:13px;color:var(--g600);margin-bottom:22px}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{display:block;font-size:13px;font-weight:600;color:var(--g600);margin-bottom:5px}
+input,select,textarea{width:100%;padding:9px 12px;border:1.5px solid var(--g200);border-radius:6px;font-size:13px;color:var(--g800);background:#fff;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{resize:vertical;min-height:72px}
+
+.sh-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.sh-item{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 10px;border:1.5px solid var(--g200);border-radius:6px;transition:.15s;user-select:none}
+.sh-item:hover{border-color:var(--blue);background:var(--blue-pale)}
+.sh-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--blue);flex-shrink:0;pointer-events:none}
+.sh-item.checked{border-color:var(--blue);background:var(--blue-pale)}
+
+.notice{background:var(--blue-pale);border:1.5px solid #93c5fd;border-radius:8px;padding:11px 15px;font-size:13px;color:var(--blue);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.notice.hidden{display:none}
+
+.topic-card{border:1.5px solid var(--g200);border-radius:8px;padding:16px 18px;margin-bottom:10px}
+.topic-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.tbadge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px}
+.bE{background:#dbeafe;color:#1e40af}.bS{background:#dcfce7;color:#166534}.bG{background:#f3e8ff;color:#6b21a8}
+.topic-name{font-size:14px;font-weight:600}
+.topic-desc{font-size:11px;color:var(--g400)}
+.sliders{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sg label{font-size:12px;font-weight:600;color:var(--g600);display:flex;justify-content:space-between;align-items:center}
+.sg label .val{color:var(--blue);font-size:14px;font-weight:700;min-width:18px;text-align:right}
+input[type=range]{width:100%;margin-top:5px;accent-color:var(--blue)}
+.sl-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--g400);margin-top:2px}
+.notes-area{margin-top:12px}
+.notes-area .notes-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g400);margin-bottom:5px}
+.notes-area textarea{min-height:54px;font-size:12px}
+
+.cat-header{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g400);margin:22px 0 8px}
+
+.threshold-bar{background:var(--blue-pale);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.threshold-bar span{font-size:13px;font-weight:700;color:var(--blue)}
+.threshold-group{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--g600);font-weight:600}
+.threshold-group input{width:58px;padding:5px 8px;border:1.5px solid var(--blue);border-radius:5px;font-size:13px;text-align:center}
+
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.stat{background:#fff;border-radius:8px;padding:16px 18px;box-shadow:var(--sh)}
+.stat .num{font-size:26px;font-weight:800}
+.stat .lbl{font-size:12px;color:var(--g600);margin-top:2px}
+
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.matrix-wrap{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:22px}
+.matrix-wrap h3{font-size:14px;font-weight:700;margin-bottom:14px}
+.summary-card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:22px}
+.summary-card h3{font-size:14px;font-weight:700;margin-bottom:12px}
+
+.result-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--g100)}
+.result-item:last-child{border-bottom:none}
+.rbadge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;min-width:78px;text-align:center;flex-shrink:0}
+.badge-material{background:var(--red-l);color:var(--red)}
+.badge-potential{background:var(--amber-l);color:var(--amber)}
+.badge-monitor{background:var(--g100);color:var(--g600)}
+.result-name{font-size:12px;font-weight:600;flex:1}
+.score-pills{display:flex;gap:5px}
+.sp{font-size:11px;padding:2px 7px;border-radius:4px;background:var(--blue-pale);color:var(--blue);font-weight:600}
+.delta{font-size:11px;font-weight:700;min-width:28px;text-align:right}
+.delta.up{color:var(--red)}.delta.down{color:var(--green)}.delta.same{color:var(--g400)}
+
+.recs{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:22px;margin-bottom:18px}
+.recs h3{font-size:14px;font-weight:700;margin-bottom:14px}
+.rec-section{margin-bottom:14px}
+.rec-section h4{font-size:13px;font-weight:700;margin-bottom:7px}
+.rec-section.material h4{color:var(--red)}.rec-section.potential h4{color:var(--amber)}.rec-section.monitor h4{color:var(--g600)}
+.rec-tag{display:inline-block;font-size:12px;background:var(--g100);border-radius:4px;padding:3px 9px;margin:2px 2px 2px 0}
+
+.yoy-section{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:22px;margin-bottom:18px}
+.yoy-section h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.yoy-table{width:100%;border-collapse:collapse;font-size:12px}
+.yoy-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g400);padding:6px 8px;border-bottom:2px solid var(--g200)}
+.yoy-table td{padding:7px 8px;border-bottom:1px solid var(--g100)}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-l)}
+.btn-secondary{background:var(--g100);color:var(--g800)}.btn-secondary:hover{background:var(--g200)}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#15693e}
+.btn-sm{padding:7px 14px;font-size:12px}
+.btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+.file-btn{position:relative;overflow:hidden}
+.file-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+
+.hidden{display:none!important}
+
+@media print{
+  header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .progress-bar,.btn-row,.hdr-actions,.no-print{display:none!important}
+  .card,.matrix-wrap,.summary-card,.recs,.yoy-section,.stat{box-shadow:none;border:1px solid var(--g200)}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="stars">★ ★ ★</div>
+  <div>
+    <h1>CSRD Double Materiality Assessment Tool</h1>
+    <p>European Sustainability Reporting Standards (ESRS) — CSRD Compliance Framework</p>
+  </div>
+  <div class="hdr-actions no-print">
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4)" onclick="saveJSON()">💾 Save Progress</button>
+    <label class="btn btn-sm file-btn" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4)">
+      📂 Load Saved
+      <input type="file" accept=".json" onchange="loadJSON(this)">
+    </label>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <div class="step active" id="tab1" onclick="goStep(1)"><div class="sn">1</div>Company Profile</div>
+  <div class="step" id="tab2" onclick="goStep(2)"><div class="sn">2</div>Impact Materiality</div>
+  <div class="step" id="tab3" onclick="goStep(3)"><div class="sn">3</div>Financial Materiality</div>
+  <div class="step" id="tab4" onclick="goStep(4)"><div class="sn">4</div>Results &amp; Report</div>
+</div>
+
+<main>
+
+<!-- STEP 1 -->
+<div id="step1">
+  <div class="card">
+    <h2>Company Profile</h2>
+    <p class="subtitle">This information contextualises your assessment and appears in the generated PDF report.</p>
+    <div id="sector-notice" class="notice hidden">📊 Scores in Steps 2 &amp; 3 have been pre-populated with sector benchmarks. Review and adjust as needed.</div>
+    <div class="form-grid">
+      <div><label>Company Name</label><input id="companyName" type="text" placeholder="e.g. Nordea Group"></div>
+      <div><label>Industry Sector</label>
+        <select id="sector" onchange="applySector(this.value)">
+          <option value="">Select sector…</option>
+          <option>Financial Services</option><option>Technology &amp; Software</option>
+          <option>Manufacturing</option><option>Retail &amp; Consumer Goods</option>
+          <option>Energy &amp; Utilities</option><option>Healthcare &amp; Life Sciences</option>
+          <option>Real Estate &amp; Construction</option><option>Agriculture &amp; Food</option>
+          <option>Transport &amp; Logistics</option><option>Professional Services</option>
+        </select>
+      </div>
+      <div><label>Company Size</label>
+        <select id="size">
+          <option value="">Select size…</option>
+          <option>Large (500+ employees)</option>
+          <option>Medium (250–499 employees)</option>
+          <option>SME (&lt;250 employees)</option>
+        </select>
+      </div>
+      <div><label>Reporting Year</label>
+        <select id="repYear"><option>2024</option><option selected>2025</option><option>2026</option></select>
+      </div>
+      <div style="grid-column:1/-1"><label>Primary Operating Countries</label><input id="countries" type="text" placeholder="e.g. Denmark, Finland, Germany"></div>
+      <div style="grid-column:1/-1"><label>Business Description</label><input id="bizDesc" type="text" placeholder="e.g. Provider of digital banking and asset management services across the Nordics"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Stakeholder Consultation</h2>
+    <p class="subtitle">CSRD requires companies to engage stakeholders when identifying material topics. Document your consultation process here.</p>
+    <label style="margin-bottom:10px;display:block">Stakeholder groups consulted</label>
+    <div class="sh-grid" id="sh-grid">
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Employees &amp; Trade Unions"><input type="checkbox"> Employees &amp; Trade Unions</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Investors &amp; Lenders"><input type="checkbox"> Investors &amp; Lenders</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Customers &amp; End-users"><input type="checkbox"> Customers &amp; End-users</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Suppliers &amp; Partners"><input type="checkbox"> Suppliers &amp; Partners</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Local Communities"><input type="checkbox"> Local Communities</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="NGOs &amp; Civil Society"><input type="checkbox"> NGOs &amp; Civil Society</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Regulators &amp; Government"><input type="checkbox"> Regulators &amp; Government</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Industry Associations"><input type="checkbox"> Industry Associations</div>
+      <div class="sh-item" onclick="toggleSH(this)" data-value="Academic &amp; Research"><input type="checkbox"> Academic &amp; Research</div>
+    </div>
+    <div class="form-grid" style="margin-top:14px">
+      <div><label>Consultation Period — From</label><input type="date" id="sh-from"></div>
+      <div><label>Consultation Period — To</label><input type="date" id="sh-to"></div>
+      <div style="grid-column:1/-1"><label>Key Concerns &amp; Findings from Stakeholders</label>
+        <textarea id="sh-concerns" placeholder="Summarise the main themes, concerns, or priorities raised by stakeholders during consultation…"></textarea>
+      </div>
+      <div style="grid-column:1/-1"><label>Consultation Methodology</label>
+        <textarea id="sh-method" style="min-height:54px" placeholder="e.g. Online survey (n=142), interviews with 8 investor representatives, two NGO roundtables…"></textarea>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="goStep(2)">Next: Impact Materiality →</button></div>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div id="step2" class="hidden">
+  <div class="card">
+    <h2>Impact Materiality</h2>
+    <p class="subtitle">Rate how significantly your company's activities affect people and the environment. Consider positive and negative, actual and potential impacts across your value chain.</p>
+    <div id="impact-topics"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Next: Financial Materiality →</button>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div id="step3" class="hidden">
+  <div class="card">
+    <h2>Financial Materiality</h2>
+    <p class="subtitle">Rate how significantly each sustainability topic creates financial risk or opportunity for your company — through regulation, market shifts, physical impacts, or stakeholder pressure.</p>
+    <div id="financial-topics"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(2)">← Back</button>
+      <button class="btn btn-primary" onclick="runResults()">Generate Results →</button>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div id="step4" class="hidden">
+  <div class="card no-print" style="padding:18px 24px">
+    <div class="threshold-bar">
+      <span>⚙ Materiality Thresholds</span>
+      <div class="threshold-group"><label>Material ≥</label><input type="number" id="thr-material" value="3.5" min="1" max="5" step="0.1" onchange="renderResults()"></div>
+      <div class="threshold-group"><label>Potential ≥</label><input type="number" id="thr-potential" value="2.5" min="1" max="5" step="0.1" onchange="renderResults()"></div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <label class="btn btn-sm btn-secondary file-btn">📊 Compare Prior Year<input type="file" accept=".json" onchange="loadPriorYear(this)"></label>
+        <button class="btn btn-sm btn-secondary" id="clear-yoy" onclick="clearPriorYear()" style="display:none">✕ Clear Comparison</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-row" id="stat-row"></div>
+
+  <div class="results-grid">
+    <div class="matrix-wrap">
+      <h3>Double Materiality Matrix</h3>
+      <canvas id="matrixChart"></canvas>
+    </div>
+    <div class="summary-card">
+      <h3>Topic Scores</h3>
+      <div id="result-list"></div>
+    </div>
+  </div>
+
+  <div class="yoy-section hidden" id="yoy-section">
+    <h3>Year-over-Year Comparison</h3>
+    <table class="yoy-table">
+      <thead><tr><th>Topic</th><th>Prior Impact</th><th>Curr Impact</th><th>Δ</th><th>Prior Financial</th><th>Curr Financial</th><th>Δ</th><th>Tier Change</th></tr></thead>
+      <tbody id="yoy-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="recs card">
+    <h3>ESRS Reporting Recommendations</h3>
+    <div id="rec-sections"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Methodology Note</h3>
+    <p style="font-size:13px;color:var(--g600);line-height:1.7">This assessment follows the <strong>ESRS 1</strong> double materiality framework under the EU Corporate Sustainability Reporting Directive (CSRD, Directive 2022/2464/EU). Double materiality encompasses two dimensions: <strong>impact materiality</strong> (the company's actual or potential impacts on people and the environment) and <strong>financial materiality</strong> (how sustainability factors create financial risks or opportunities for the company). A topic is considered material if it meets the threshold on either dimension. Scores are calculated as the average of severity/magnitude and likelihood ratings on a 1–5 scale. Sector benchmark pre-populations are based on EFRAG's ESRS sector-specific guidance and are intended as starting points only. Final materiality determinations should be reviewed by qualified sustainability professionals and validated through stakeholder engagement.</p>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="goStep(3)">← Revise Assessment</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨 Print</button>
+    <button class="btn btn-secondary" onclick="saveJSON()">💾 Save JSON</button>
+    <button class="btn btn-green" onclick="exportPDF()">⬇ Download PDF Report</button>
+  </div>
+</div>
+
+</main>
+
+<script>
+const TOPICS = [
+  {id:'E1',cat:'E',name:'Climate Change',desc:'GHG emissions, energy use, mitigation & adaptation'},
+  {id:'E2',cat:'E',name:'Pollution',desc:'Air, water, soil emissions and hazardous substances'},
+  {id:'E3',cat:'E',name:'Water & Marine Resources',desc:'Water consumption, marine ecosystem impacts'},
+  {id:'E4',cat:'E',name:'Biodiversity & Ecosystems',desc:'Land use, species protection, ecosystem services'},
+  {id:'E5',cat:'E',name:'Resource Use & Circular Economy',desc:'Material inputs, waste, product end-of-life'},
+  {id:'S1',cat:'S',name:'Own Workforce',desc:'Working conditions, equal treatment, health & safety'},
+  {id:'S2',cat:'S',name:'Value Chain Workers',desc:'Supply chain labour rights and conditions'},
+  {id:'S3',cat:'S',name:'Affected Communities',desc:'Local and indigenous community impacts'},
+  {id:'S4',cat:'S',name:'Consumers & End-users',desc:'Product safety, privacy, responsible marketing'},
+  {id:'G1',cat:'G',name:'Business Conduct',desc:'Ethics, anti-corruption, lobbying, supply chain management'},
+];
+
+const SECTOR_DEFAULTS = {
+  'Financial Services':         {E1:3,E5:3,S1:3,S4:4,G1:4},
+  'Technology & Software':      {E1:3,E5:3,S1:3,S4:4,G1:4},
+  'Manufacturing':              {E1:4,E2:4,E3:3,E4:3,E5:4,S1:3,S2:4},
+  'Retail & Consumer Goods':    {E5:3,S2:4,S4:3,G1:3},
+  'Energy & Utilities':         {E1:5,E2:4,E3:4,E4:4,S3:3,G1:3},
+  'Healthcare & Life Sciences': {S1:3,S4:4,G1:3},
+  'Real Estate & Construction': {E1:3,E3:3,E4:3,S3:3},
+  'Agriculture & Food':         {E2:3,E3:4,E4:5,E5:3,S2:4},
+  'Transport & Logistics':      {E1:4,E2:4,S1:3,G1:3},
+  'Professional Services':      {S1:3,G1:4},
+};
+
+// Central state
+const STATE = {
+  scores: {},      // {topicId: {impact_sev, impact_like, impact_notes, financial_sev, financial_like, financial_notes}}
+  prevScores: null,
+  prevYear: '',
+};
+
+// Initialise scores
+TOPICS.forEach(t => {
+  STATE.scores[t.id] = {impact_sev:3, impact_like:3, impact_notes:'', financial_sev:3, financial_like:3, financial_notes:''};
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function computeScore(scoreObj, key) {
+  if (!scoreObj) return 3;
+  const sev = parseFloat(scoreObj[key+'_sev']) || 3;
+  const like = parseFloat(scoreObj[key+'_like']) || 3;
+  return Math.round((sev + like) / 2 * 10) / 10;
+}
+
+function getThresholds() {
+  return {
+    material: parseFloat(document.getElementById('thr-material')?.value ?? 3.5),
+    potential: parseFloat(document.getElementById('thr-potential')?.value ?? 2.5),
+  };
+}
+
+function classify(i, f) {
+  const {material, potential} = getThresholds();
+  return (i >= material || f >= material) ? 'material'
+       : (i >= potential || f >= potential) ? 'potential'
+       : 'monitor';
+}
+
+function getClassified() {
+  return TOPICS.map(t => {
+    const i = computeScore(STATE.scores[t.id], 'impact');
+    const f = computeScore(STATE.scores[t.id], 'financial');
+    return {...t, i, f, tier: classify(i, f)};
+  });
+}
+
+// ── Stakeholder checkboxes ────────────────────────────────────────────────────
+
+function toggleSH(el) {
+  const cb = el.querySelector('input[type=checkbox]');
+  const checked = !cb.checked;
+  cb.checked = checked;
+  el.classList.toggle('checked', checked);
+}
+
+function getSelectedSH() {
+  return [...document.querySelectorAll('#sh-grid .sh-item.checked')].map(el => el.dataset.value);
+}
+
+// ── Sector pre-population ─────────────────────────────────────────────────────
+
+function applySector(sector) {
+  if (!sector) return;
+  const defaults = SECTOR_DEFAULTS[sector] || {};
+  TOPICS.forEach(t => {
+    const v = defaults[t.id] || 3;
+    STATE.scores[t.id].impact_sev = v;
+    STATE.scores[t.id].impact_like = v;
+    STATE.scores[t.id].financial_sev = v;
+    STATE.scores[t.id].financial_like = v;
+  });
+  // Force rebuild of both topic steps so sliders reflect new values
+  buildTopics('impact-topics', 'impact');
+  buildTopics('financial-topics', 'financial');
+  document.getElementById('sector-notice').classList.remove('hidden');
+}
+
+// ── Build topic scoring UI ────────────────────────────────────────────────────
+
+function buildTopics(containerId, scoreKey) {
+  const cats = ['E','S','G'];
+  const catLabels = {E:'Environmental', S:'Social', G:'Governance'};
+  const sevLabel = scoreKey === 'impact' ? 'Severity of Impact' : 'Financial Magnitude';
+  const likeLabel = scoreKey === 'impact' ? 'Likelihood of Impact' : 'Financial Likelihood';
+
+  let html = '';
+  cats.forEach(c => {
+    html += `<div class="cat-header">${catLabels[c]}</div>`;
+    TOPICS.filter(t => t.cat === c).forEach(t => {
+      const sev  = STATE.scores[t.id][scoreKey+'_sev']  ?? 3;
+      const like = STATE.scores[t.id][scoreKey+'_like'] ?? 3;
+      const notes = STATE.scores[t.id][scoreKey+'_notes'] ?? '';
+      // Unique IDs per topic + scoreKey to avoid any collision between steps
+      const svId   = `${scoreKey}_sv_${t.id}`;
+      const lkId   = `${scoreKey}_lk_${t.id}`;
+      const svLbl  = `${scoreKey}_sv_lbl_${t.id}`;
+      const lkLbl  = `${scoreKey}_lk_lbl_${t.id}`;
+      const notesId = `${scoreKey}_notes_${t.id}`;
+
+      html += `
+      <div class="topic-card">
+        <div class="topic-header">
+          <span class="tbadge b${t.cat}">${t.id}</span>
+          <div>
+            <div class="topic-name">${t.name}</div>
+            <div class="topic-desc">${t.desc}</div>
+          </div>
+        </div>
+        <div class="sliders">
+          <div class="sg">
+            <label>${sevLabel} <span class="val" id="${svLbl}">${sev}</span></label>
+            <input type="range" min="1" max="5" step="1" value="${sev}" id="${svId}"
+              oninput="upScore('${t.id}','${scoreKey}','sev',this.value,'${svLbl}')">
+            <div class="sl-labels"><span>Negligible</span><span>Moderate</span><span>Severe</span></div>
+          </div>
+          <div class="sg">
+            <label>${likeLabel} <span class="val" id="${lkLbl}">${like}</span></label>
+            <input type="range" min="1" max="5" step="1" value="${like}" id="${lkId}"
+              oninput="upScore('${t.id}','${scoreKey}','like',this.value,'${lkLbl}')">
+            <div class="sl-labels"><span>Unlikely</span><span>Possible</span><span>Likely</span></div>
+          </div>
+        </div>
+        <div class="notes-area">
+          <div class="notes-lbl">Rationale / Notes</div>
+          <textarea id="${notesId}" placeholder="Document the reasoning behind your rating — e.g. key data sources, expert input, relevant incidents…"
+            onchange="upNotes('${t.id}','${scoreKey}',this.value)">${notes}</textarea>
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById(containerId).innerHTML = html;
+}
+
+// FIX 1: upScore now takes the exact label element ID as a parameter — no ambiguity
+function upScore(id, key, sub, val, lblId) {
+  STATE.scores[id][key+'_'+sub] = +val;
+  document.getElementById(lblId).textContent = val;
+}
+
+function upNotes(id, key, val) {
+  STATE.scores[id][key+'_notes'] = val;
+}
+
+// ── Step navigation ───────────────────────────────────────────────────────────
+
+function goStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('step'+i).classList.toggle('hidden', i !== n);
+    const tab = document.getElementById('tab'+i);
+    tab.classList.remove('active','done');
+    if (i === n) tab.classList.add('active');
+    else if (i < n) tab.classList.add('done');
+  });
+  // Always rebuild topic steps when navigating to them so notes + state are fresh
+  if (n === 2) buildTopics('impact-topics', 'impact');
+  if (n === 3) buildTopics('financial-topics', 'financial');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── Results rendering ─────────────────────────────────────────────────────────
+
+let chartInst = null;
+
+function runResults() {
+  goStep(4);
+  renderResults();
+}
+
+function renderResults() {
+  const classified = getClassified();
+  const {material, potential} = getThresholds();
+
+  // Stats
+  const mat = classified.filter(t => t.tier==='material').length;
+  const pot = classified.filter(t => t.tier==='potential').length;
+  const mon = classified.filter(t => t.tier==='monitor').length;
+  document.getElementById('stat-row').innerHTML = `
+    <div class="stat"><div class="num" style="color:var(--red)">${mat}</div><div class="lbl">Material — Must Report</div></div>
+    <div class="stat"><div class="num" style="color:var(--amber)">${pot}</div><div class="lbl">Potentially Material</div></div>
+    <div class="stat"><div class="num" style="color:var(--g400)">${mon}</div><div class="lbl">Monitor Only</div></div>`;
+
+  // Result list
+  const sorted = [...classified].sort((a,b) => (b.i+b.f) - (a.i+a.f));
+  document.getElementById('result-list').innerHTML = sorted.map(t => {
+    let delta = '';
+    if (STATE.prevScores) {
+      const pi = computeScore(STATE.prevScores[t.id], 'impact');
+      const pf = computeScore(STATE.prevScores[t.id], 'financial');
+      const diff = Math.round((t.i - pi + t.f - pf) * 10) / 10;
+      const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'same';
+      const sym = diff > 0 ? '▲' : diff < 0 ? '▼' : '–';
+      delta = `<span class="delta ${cls}">${sym}</span>`;
+    }
+    return `<div class="result-item">
+      <span class="rbadge badge-${t.tier}">${t.tier==='material'?'MATERIAL':t.tier==='potential'?'POTENTIAL':'MONITOR'}</span>
+      <span class="result-name">${t.id}: ${t.name}</span>
+      <div class="score-pills"><span class="sp">I:${t.i}</span><span class="sp">F:${t.f}</span></div>
+      ${delta}
+    </div>`;
+  }).join('');
+
+  // Recommendations
+  const tierMeta = [
+    {tier:'material',  label:'🔴 Material — Include in CSRD Report',            cls:'material'},
+    {tier:'potential', label:'🟡 Potentially Material — Further Assessment Required', cls:'potential'},
+    {tier:'monitor',   label:'⚪ Monitor — Not Currently Material',              cls:'monitor'},
+  ];
+  document.getElementById('rec-sections').innerHTML = tierMeta.map(({tier,label,cls}) => {
+    const items = classified.filter(t => t.tier === tier);
+    if (!items.length) return '';
+    return `<div class="rec-section ${cls}"><h4>${label}</h4><div>${items.map(t=>`<span class="rec-tag">${t.id}: ${t.name}</span>`).join('')}</div></div>`;
+  }).join('');
+
+  // Y-o-Y table
+  if (STATE.prevScores) {
+    document.getElementById('yoy-section').classList.remove('hidden');
+    document.getElementById('yoy-tbody').innerHTML = sorted.map(t => {
+      const pi = computeScore(STATE.prevScores[t.id], 'impact');
+      const pf = computeScore(STATE.prevScores[t.id], 'financial');
+      const prevTier = classify(pi, pf);
+      const dI = Math.round((t.i - pi) * 10) / 10;
+      const dF = Math.round((t.f - pf) * 10) / 10;
+      const diStyle = dI > 0 ? 'color:var(--red)' : dI < 0 ? 'color:var(--green)' : 'color:var(--g400)';
+      const dfStyle = dF > 0 ? 'color:var(--red)' : dF < 0 ? 'color:var(--green)' : 'color:var(--g400)';
+      const tierChg = t.tier !== prevTier ? `<strong>${prevTier} → ${t.tier}</strong>` : '—';
+      return `<tr>
+        <td><strong>${t.id}</strong> ${t.name}</td>
+        <td>${pi}</td><td>${t.i}</td><td style="${diStyle}">${dI > 0 ? '+'+dI : dI}</td>
+        <td>${pf}</td><td>${t.f}</td><td style="${dfStyle}">${dF > 0 ? '+'+dF : dF}</td>
+        <td>${tierChg}</td></tr>`;
+    }).join('');
+  }
+
+  // FIX 3: Cache classified result for chart plugins — no repeated calls per frame
+  const cachedClassified = [...classified];
+
+  // Matrix chart
+  const colors = {material:'#b91c1c', potential:'#b45309', monitor:'#9ca3af'};
+  const datasets = ['material','potential','monitor'].map(tier => ({
+    label: tier.charAt(0).toUpperCase() + tier.slice(1),
+    data: cachedClassified.filter(t => t.tier === tier).map(t => ({x:t.f, y:t.i, label:t.id})),
+    backgroundColor: colors[tier] + 'cc',
+    borderColor: colors[tier],
+    borderWidth: 1.5,
+    pointRadius: 10,
+    pointHoverRadius: 12,
+  }));
+
+  if (STATE.prevScores) {
+    datasets.push({
+      label: `Prior Year (${STATE.prevYear || 'Previous'})`,
+      data: TOPICS.map(t => ({
+        x: computeScore(STATE.prevScores[t.id], 'financial'),
+        y: computeScore(STATE.prevScores[t.id], 'impact'),
+        label: t.id,
+      })),
+      backgroundColor: '#9ca3af44',
+      borderColor: '#9ca3af',
+      borderWidth: 1,
+      pointRadius: 7,
+    });
+  }
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById('matrixChart'), {
+    type: 'scatter',
+    data: {datasets},
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {position:'bottom', labels:{font:{size:11}}},
+        tooltip: {callbacks: {label: ctx => {
+          const t = cachedClassified.find(t => t.f === ctx.parsed.x && t.i === ctx.parsed.y);
+          return t ? `${t.id}: ${t.name} (I:${t.i}, F:${t.f})` : `Prior (I:${ctx.parsed.y}, F:${ctx.parsed.x})`;
+        }}},
+      },
+      scales: {
+        x: {min:1, max:5, title:{display:true, text:'Financial Materiality →', font:{size:11}}, grid:{color:'#f3f4f6'}},
+        y: {min:1, max:5, title:{display:true, text:'Impact Materiality →',    font:{size:11}}, grid:{color:'#f3f4f6'}},
+      },
+    },
+    plugins: [
+      // Topic ID labels on current-year dots
+      {
+        id: 'dotLabels',
+        afterDatasetsDraw(chart) {
+          const {ctx} = chart;
+          chart.data.datasets.slice(0,3).forEach((ds, di) => {
+            ds.data.forEach((pt, pi) => {
+              const el = chart.getDatasetMeta(di).data[pi];
+              if (!el) return;
+              ctx.fillStyle = '#fff';
+              ctx.font = 'bold 9px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(pt.label, el.x, el.y);
+            });
+          });
+        },
+      },
+      // FIX 3: Y-o-Y arrows use cached classified, no re-computation per frame
+      {
+        id: 'yoyArrows',
+        afterDatasetsDraw(chart) {
+          if (!STATE.prevScores) return;
+          const {ctx, scales} = chart;
+          cachedClassified.forEach(cur => {
+            const pi = computeScore(STATE.prevScores[cur.id], 'impact');
+            const pf = computeScore(STATE.prevScores[cur.id], 'financial');
+            const px = scales.x.getPixelForValue(pf), py = scales.y.getPixelForValue(pi);
+            const cx = scales.x.getPixelForValue(cur.f), cy = scales.y.getPixelForValue(cur.i);
+            if (Math.abs(px-cx) < 2 && Math.abs(py-cy) < 2) return;
+            ctx.save();
+            ctx.strokeStyle = '#9ca3af';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3,3]);
+            ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(cx,cy); ctx.stroke();
+            const angle = Math.atan2(cy-py, cx-px);
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#9ca3af';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx - 8*Math.cos(angle-0.4), cy - 8*Math.sin(angle-0.4));
+            ctx.lineTo(cx - 8*Math.cos(angle+0.4), cy - 8*Math.sin(angle+0.4));
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
+          });
+        },
+      },
+    ],
+  });
+}
+
+// ── Save / Load JSON ──────────────────────────────────────────────────────────
+
+function getFormState() {
+  return {
+    savedAt: new Date().toISOString(),
+    company: {
+      name:     document.getElementById('companyName').value,
+      sector:   document.getElementById('sector').value,
+      size:     document.getElementById('size').value,
+      year:     document.getElementById('repYear').value,
+      countries:document.getElementById('countries').value,
+      bizDesc:  document.getElementById('bizDesc').value,
+    },
+    stakeholders: {
+      groups:   getSelectedSH(),
+      from:     document.getElementById('sh-from').value,
+      to:       document.getElementById('sh-to').value,
+      concerns: document.getElementById('sh-concerns').value,
+      method:   document.getElementById('sh-method').value,
+    },
+    scores: JSON.parse(JSON.stringify(STATE.scores)),
+  };
+}
+
+function saveJSON() {
+  const data = JSON.stringify(getFormState(), null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+  const co = document.getElementById('companyName').value || 'Assessment';
+  a.download = `CSRD_${co.replace(/\s+/g,'_')}_${document.getElementById('repYear').value}.json`;
+  a.click();
+}
+
+function loadJSON(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (d.company) {
+        document.getElementById('companyName').value = d.company.name    || '';
+        document.getElementById('sector').value      = d.company.sector  || '';
+        document.getElementById('size').value        = d.company.size    || '';
+        document.getElementById('repYear').value     = d.company.year    || '2025';
+        document.getElementById('countries').value   = d.company.countries || '';
+        document.getElementById('bizDesc').value     = d.company.bizDesc || '';
+      }
+      if (d.stakeholders) {
+        const groups = d.stakeholders.groups || [];
+        document.querySelectorAll('#sh-grid .sh-item').forEach(el => {
+          const active = groups.includes(el.dataset.value);
+          el.querySelector('input[type=checkbox]').checked = active;
+          el.classList.toggle('checked', active);
+        });
+        document.getElementById('sh-from').value     = d.stakeholders.from     || '';
+        document.getElementById('sh-to').value       = d.stakeholders.to       || '';
+        document.getElementById('sh-concerns').value = d.stakeholders.concerns || '';
+        document.getElementById('sh-method').value   = d.stakeholders.method   || '';
+      }
+      if (d.scores) Object.assign(STATE.scores, d.scores);
+
+      // FIX 5: Rebuild topic UIs immediately regardless of which step is active
+      buildTopics('impact-topics', 'impact');
+      buildTopics('financial-topics', 'financial');
+
+      alert('Assessment loaded successfully!');
+    } catch(err) { alert('Error loading file. Please ensure it is a valid CSRD assessment JSON.'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function loadPriorYear(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (d.scores) { STATE.prevScores = d.scores; STATE.prevYear = d.company?.year || ''; }
+      document.getElementById('clear-yoy').style.display = '';
+      if (!document.getElementById('step4').classList.contains('hidden')) renderResults();
+      alert(`Prior year data loaded${STATE.prevYear ? ' ('+STATE.prevYear+')' : ''}.`);
+    } catch(err) { alert('Error loading prior year file.'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function clearPriorYear() {
+  STATE.prevScores = null; STATE.prevYear = '';
+  document.getElementById('clear-yoy').style.display = 'none';
+  document.getElementById('yoy-section').classList.add('hidden');
+  renderResults();
+}
+
+// ── PDF Export ────────────────────────────────────────────────────────────────
+
+function exportPDF() {
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF();
+  const co       = document.getElementById('companyName').value || 'Company';
+  const sector   = document.getElementById('sector').value     || 'N/A';
+  const size     = document.getElementById('size').value       || 'N/A';
+  const year     = document.getElementById('repYear').value;
+  const countries= document.getElementById('countries').value  || 'N/A';
+  const desc     = document.getElementById('bizDesc').value    || '';
+  const shGroups = getSelectedSH().join(', ') || 'Not recorded';
+  const shFrom   = document.getElementById('sh-from').value    || '';
+  const shTo     = document.getElementById('sh-to').value      || '';
+  const shConcerns = document.getElementById('sh-concerns').value || '';
+  const shMethod   = document.getElementById('sh-method').value  || '';
+
+  let y = 20;
+
+  // Header
+  doc.setFillColor(0,51,153); doc.rect(0,0,210,42,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('CSRD Double Materiality Assessment Report', 20, 17);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(`${co} · Reporting Year ${year}`, 20, 26);
+  doc.text(`Generated ${new Date().toLocaleDateString('en-GB')}  ·  ESRS Double Materiality Framework`, 20, 34);
+  y = 54;
+
+  const newPage = () => { doc.addPage(); y = 20; };
+  const pg = () => { if (y > 265) newPage(); };
+
+  const section = title => {
+    pg();
+    doc.setTextColor(0,51,153); doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text(title, 20, y); y += 2;
+    doc.setDrawColor(0,51,153); doc.setLineWidth(0.5); doc.line(20, y, 190, y); y += 7;
+    doc.setTextColor(31,41,55); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  };
+
+  const row = (k, v) => {
+    if (!v) return;
+    pg();
+    doc.setFont('helvetica','bold'); doc.text(`${k}:`, 20, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(75,85,99);
+    const lines = doc.splitTextToSize(v+'', 150);
+    doc.text(lines, 55, y);
+    doc.setTextColor(31,41,55);
+    y += lines.length * 6 + 2;
+  };
+
+  section('Company Profile');
+  row('Company', co); row('Sector', sector); row('Size', size);
+  row('Countries', countries); if (desc) row('Description', desc);
+  y += 4;
+
+  section('Stakeholder Consultation');
+  row('Groups Consulted', shGroups);
+  if (shFrom || shTo) row('Period', `${shFrom || '?'} to ${shTo || '?'}`);
+  if (shMethod)   row('Methodology', shMethod);
+  if (shConcerns) row('Key Findings', shConcerns);
+  y += 4;
+
+  section('Materiality Results');
+  const classified = getClassified();
+  const sorted = [...classified].sort((a,b) => (b.i+b.f) - (a.i+a.f));
+  const tierColors = {material:[185,28,28], potential:[180,83,9], monitor:[156,163,175]};
+  const tierLabels = {material:'MATERIAL', potential:'POTENTIAL', monitor:'MONITOR'};
+
+  sorted.forEach(t => {
+    pg();
+    const [r,g,b] = tierColors[t.tier];
+    doc.setFillColor(r,g,b); doc.roundedRect(20, y-4, 22, 7, 1, 1, 'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text(tierLabels[t.tier], 22, y);
+    doc.setTextColor(31,41,55); doc.setFont('helvetica','normal');
+    doc.text(`${t.id}: ${t.name}`, 46, y);
+    doc.setTextColor(75,85,99);
+    doc.text(`Impact: ${t.i}  ·  Financial: ${t.f}`, 155, y);
+    y += 8;
+
+    // FIX 4: Show impact notes and financial notes separately
+    const iNotes = STATE.scores[t.id]?.impact_notes?.trim();
+    const fNotes = STATE.scores[t.id]?.financial_notes?.trim();
+    doc.setFontSize(8);
+    if (iNotes) {
+      pg();
+      const lines = doc.splitTextToSize('Impact notes: ' + iNotes, 158);
+      doc.text(lines, 26, y); y += lines.length * 5 + 2;
+    }
+    if (fNotes) {
+      pg();
+      const lines = doc.splitTextToSize('Financial notes: ' + fNotes, 158);
+      doc.text(lines, 26, y); y += lines.length * 5 + 2;
+    }
+    if (iNotes || fNotes) y += 1;
+    doc.setFontSize(10);
+  });
+
+  y += 4;
+  section('Reporting Recommendations');
+  const mat = sorted.filter(t=>t.tier==='material').map(t=>t.name).join(', ');
+  const pot = sorted.filter(t=>t.tier==='potential').map(t=>t.name).join(', ');
+  const mon = sorted.filter(t=>t.tier==='monitor').map(t=>t.name).join(', ');
+  if (mat) { pg(); doc.setTextColor(185,28,28); doc.text('Must Report:', 20, y); doc.setTextColor(75,85,99); const l=doc.splitTextToSize(mat,150); doc.text(l,55,y); y+=l.length*6+4; }
+  if (pot) { pg(); doc.setTextColor(180,83,9);  doc.text('Assess Further:', 20, y); doc.setTextColor(75,85,99); const l=doc.splitTextToSize(pot,148); doc.text(l,59,y); y+=l.length*6+4; }
+  if (mon) { pg(); doc.setTextColor(107,114,128);doc.text('Monitor:', 20, y); doc.setTextColor(75,85,99); const l=doc.splitTextToSize(mon,160); doc.text(l,42,y); y+=l.length*6+4; }
+
+  y += 4;
+  section('Methodology Note');
+  doc.setTextColor(75,85,99); doc.setFontSize(9);
+  const mtext = 'This assessment follows the ESRS 1 double materiality framework under the EU Corporate Sustainability Reporting Directive (CSRD, Directive 2022/2464/EU). Double materiality encompasses impact materiality (the company\'s actual or potential impacts on people and environment) and financial materiality (how sustainability factors create financial risks or opportunities). A topic is material if it meets the threshold on either dimension. Scores are calculated as the average of severity and likelihood ratings on a 1–5 scale. Final determinations should be validated by qualified sustainability professionals.';
+  const ml = doc.splitTextToSize(mtext, 170);
+  doc.text(ml, 20, y); y += ml.length * 5 + 4;
+
+  const {material, potential} = getThresholds();
+  y += 4; pg();
+  doc.setTextColor(156,163,175); doc.setFontSize(8);
+  doc.text(`Thresholds: Material ≥${material}  ·  Potential ≥${potential}  ·  CSRD Double Materiality Assessment Tool`, 20, y);
+
+  doc.save(`CSRD_Assessment_${co.replace(/\s+/g,'_')}_${year}.pdf`);
+}
+</script>
+</body>
+</html>
